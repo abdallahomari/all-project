@@ -1,0 +1,68 @@
+<div class="backdrop" (click)="closed.emit()"></div>
+<section class="sheet" role="dialog" aria-modal="true" [attr.aria-label]="'sheet.title' | t">
+  <div class="sheet__grab" aria-hidden="true"></div>
+  <header class="sheet__head">
+    <div>
+      <h2>{{ order().customerName }}</h2>
+      <p class="muted">{{ shop()?.name }} · <strong class="amount">{{ amount() }}</strong></p>
+    </div>
+    <button class="btn btn--ghost btn--icon" (click)="closed.emit()" [attr.aria-label]="'action.close' | t">
+      <app-icon name="close" />
+    </button>
+  </header>
+
+  @if (!active()) {
+    <p class="current">
+      <span class="badge" [class]="'badge badge--' + order().status">{{ 'status.' + order().status | t }}</span>
+      @if (order().statusReason) { <span class="muted">· {{ 'reason.' + order().statusReason | t }}</span> }
+    </p>
+    <button class="btn btn--primary btn--block" [disabled]="busy()" (click)="reopen()">{{ 'sheet.reopen' | t }}</button>
+  } @else if (!chosen()) {
+    <button class="btn btn--success btn--block btn--xl" [disabled]="busy()" (click)="deliverNow()">
+      <app-icon name="check" /> {{ 'status.delivered' | t }} · {{ amount() }}
+    </button>
+    <div class="grid">
+      @for (s of others; track s) {
+        <button class="tile" [class]="'tile tile--' + s" (click)="choose(s)">{{ 'status.' + s | t }}</button>
+      }
+    </div>
+    <button class="btn btn--ghost btn--block" (click)="edit.emit(order().id)">
+      <app-icon name="edit" [size]="18" /> {{ 'action.edit' | t }}
+    </button>
+  } @else {
+    <p class="chosen"><span class="badge" [class]="'badge badge--' + chosen()">{{ 'status.' + chosen() | t }}</span></p>
+
+    @if (needsCash()) {
+      <label class="field">
+        <span>{{ 'sheet.collected' | t }}</span>
+        <input class="input input--big" inputmode="decimal" [ngModel]="collected()" (ngModelChange)="collected.set($event)" />
+      </label>
+    }
+    @if (chosen() === 'postponed') {
+      <label class="field">
+        <span>{{ 'sheet.date' | t }}</span>
+        <input class="input" type="date" [ngModel]="date()" (ngModelChange)="date.set($event)" />
+      </label>
+    }
+    @if (reasons().length) {
+      <div class="field">
+        <span>{{ 'sheet.reason' | t }}</span>
+        <div class="chips">
+          @for (r of reasons(); track r) {
+            <button class="chip" [class.chip--on]="reason() === r" (click)="reason.set(reason() === r ? '' : r)">
+              {{ 'reason.' + r | t }}
+            </button>
+          }
+        </div>
+      </div>
+    }
+    <label class="field">
+      <span>{{ 'sheet.note' | t }}</span>
+      <input class="input" [ngModel]="note()" (ngModelChange)="note.set($event)" maxlength="500" />
+    </label>
+    <div class="row">
+      <button class="btn btn--ghost" (click)="chosen.set(null)">{{ 'action.cancel' | t }}</button>
+      <button class="btn btn--primary grow" [disabled]="busy()" (click)="confirm()">{{ 'sheet.confirm' | t }}</button>
+    </div>
+  }
+</section>

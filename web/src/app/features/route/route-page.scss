@@ -1,0 +1,37 @@
+:host { display: block; }
+.top { display: flex; justify-content: space-between; align-items: center; gap: 8px; padding: 12px 16px 6px;
+  max-width: 640px; margin: 0 auto; }
+.top h1 { margin: 0; font-size: 22px; }
+.top p { margin: 0; }
+.progress { height: 4px; background: var(--line); max-width: 640px; margin: 0 auto; }
+.progress span { display: block; height: 100%; background: var(--success); transition: width .3s; }
+.map { height: 40dvh; min-height: 220px; max-height: 420px; }
+.page { padding-top: 12px; display: flex; flex-direction: column; gap: 4px; }
+.tools { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 4px; }
+.pickup { display: flex; align-items: center; gap: 12px; }
+.next { display: flex; flex-direction: column; gap: 12px; border: 2px solid var(--primary); }
+.next__head { display: flex; gap: 12px; align-items: flex-start; cursor: pointer; }
+.next__head h3 { margin: 0; font-size: 20px; }
+.next__head p { margin: 2px 0 0; }
+.next__meta { display: flex; flex-direction: column; align-items: flex-end; gap: 2px; text-align: end; }
+.cash { font-size: 20px; font-weight: 700; color: var(--success); }
+.next__actions { display: flex; gap: 8px; }
+.next__actions .btn--primary { flex: 1; }
+.num { flex-shrink: 0; display: grid; place-items: center; width: 32px; height: 32px; border-radius: 16px;
+  border: 2px solid var(--primary); color: var(--primary); font-weight: 700; }
+.num--next { width: 40px; height: 40px; border-radius: 20px; background: var(--primary); color: var(--primary-ink); font-size: 18px; }
+.num--warn { border-color: var(--warning); color: var(--warning); }
+.list { list-style: none; margin: 0; padding: 4px 0; }
+.stop { display: flex; align-items: center; gap: 10px; padding: 10px 14px; border-bottom: 1px solid var(--line); }
+.stop:last-child { border-bottom: 0; }
+.stop__body { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; text-align: start; background: none;
+  border: 0; padding: 4px 0; color: var(--ink); min-height: 48px; justify-content: center; }
+.stop__body > * { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.stop__move { display: flex; flex-direction: column; gap: 2px; }
+.stop__move .btn { width: 40px; min-height: 32px; border: 0; }
+.warn { color: var(--warning); }
+.hint { margin: -4px 4px 8px; }
+.toggle { background: none; border: 0; padding: 0; cursor: pointer; }
+.empty { text-align: center; padding: 32px 16px; display: flex; flex-direction: column; align-items: center; gap: 4px; }
+.empty p { margin: 0; }
+.empty .btn { margin-top: 12px; }

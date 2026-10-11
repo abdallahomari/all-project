@@ -1,0 +1,9 @@
+:host { display: block; }
+.two { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+.grow { flex: 1; min-width: 0; }
+.loc-head { display: flex; justify-content: space-between; align-items: center; }
+.picker { height: 320px; }
+.hint { margin: 0; }
+.ask { border: 2px solid var(--success); }
+.ask p { margin: 0; }
+.actions { display: flex; flex-direction: column; gap: 8px; }

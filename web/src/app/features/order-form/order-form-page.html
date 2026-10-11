@@ -1,0 +1,110 @@
+<main class="page stack">
+  <h1 class="page-title">{{ (editing() ? 'form.editTitle' : 'form.newTitle') | t }}</h1>
+
+  @if (askFor(); as o) {
+    <!-- Created without a location: one tap to ask the customer on WhatsApp -->
+    <section class="card stack ask">
+      <p><strong>{{ 'form.saved' | t }}</strong> — {{ o.customerName }}</p>
+      <p class="muted">{{ 'form.askNow' | t }}</p>
+      <a class="btn btn--success btn--block btn--xl" [href]="askUrl(o)" target="_blank" rel="noopener" (click)="doneAsking(false)">
+        <app-icon name="whatsapp" /> {{ 'action.ask' | t }}
+      </a>
+      <button class="btn btn--ghost btn--block" (click)="doneAsking(true)">{{ 'action.close' | t }}</button>
+    </section>
+  }
+
+  @if (!editing()) {
+    <section class="card stack">
+      <label class="field" for="paste">{{ 'form.paste' | t }}</label>
+      <textarea id="paste" class="input" [placeholder]="'form.pastePlaceholder' | t" [ngModel]="paste()"
+        (ngModelChange)="paste.set($event)" (paste)="autoParse()"></textarea>
+      <div class="row">
+        <button class="btn btn--ghost grow" type="button" (click)="pasteFromClipboard()"><app-icon name="paste" [size]="18" /> {{ 'form.pasteButton' | t }}</button>
+        <button class="btn btn--primary grow" type="button" [disabled]="!paste().trim()" (click)="parse()">{{ 'form.read' | t }}</button>
+      </div>
+      @if (parsedMsg()) { <div class="notice notice--info small">{{ parsedMsg() }}</div> }
+    </section>
+  }
+
+  <section class="card stack">
+    <div class="field">
+      <span>{{ 'form.shop' | t }}</span>
+      <div class="chips">
+        @for (s of store.shops(); track s.id) {
+          <button type="button" class="chip" [class.chip--on]="shopId() === s.id && newShop() === null" (click)="shopId.set(s.id); newShop.set(null)">{{ s.name }}</button>
+        }
+        <button type="button" class="chip" [class.chip--on]="newShop() !== null" (click)="newShop.set('')">{{ 'form.newShop' | t }}</button>
+      </div>
+      @if (newShop() !== null) {
+        <input class="input" [placeholder]="'form.shopName' | t" [ngModel]="newShop()" (ngModelChange)="newShop.set($event)" maxlength="80" />
+      }
+    </div>
+
+    <label class="field">{{ 'form.customerName' | t }}
+      <input class="input" [ngModel]="customerName()" (ngModelChange)="customerName.set($event)" maxlength="80" autocomplete="off" />
+    </label>
+    <div class="two">
+      <label class="field">{{ 'form.customerPhone' | t }}
+        <input class="input ltr" type="tel" inputmode="tel" placeholder="07X XXX XXXX" [ngModel]="customerPhone()" (ngModelChange)="customerPhone.set($event)" />
+      </label>
+      <label class="field">{{ 'form.amount' | t }}
+        <input class="input ltr" inputmode="decimal" placeholder="0.000" [ngModel]="amount()" (ngModelChange)="amount.set($event)" />
+      </label>
+    </div>
+    <label class="field">{{ 'form.address' | t }}
+      <input class="input" [placeholder]="'form.addressPlaceholder' | t" [ngModel]="addressNote()" (ngModelChange)="addressNote.set($event)" maxlength="500" />
+    </label>
+  </section>
+
+  <section class="card stack">
+    <div class="loc-head">
+      <span class="field">{{ 'form.location' | t }}</span>
+      @if (location(); as l) {
+        <span class="badge badge--delivered"><app-icon name="pin" [size]="14" /> {{ 'form.locationSet' | t }}</span>
+      } @else {
+        <span class="badge badge--postponed">{{ 'form.locationNone' | t }}</span>
+      }
+    </div>
+    @if (location(); as l) {
+      <div class="row small muted">
+        <span class="ltr grow">{{ l.lat.toFixed(5) }}, {{ l.lng.toFixed(5) }}</span>
+        <button class="btn btn--ghost btn--sm" type="button" (click)="location.set(null)">{{ 'form.clearLocation' | t }}</button>
+      </div>
+    }
+
+    <div class="row">
+      <input class="input ltr grow" type="url" [placeholder]="'form.mapsLink' | t" [ngModel]="mapsLink()" (ngModelChange)="mapsLink.set($event)" />
+      <button class="btn btn--outline" type="button" [disabled]="!mapsLink().trim() || resolving()" (click)="useLink()">
+        {{ (resolving() ? 'form.resolving' : 'form.useLink') | t }}
+      </button>
+    </div>
+    <div class="row">
+      @if (maps.state() === 'ready') {
+        <button class="btn btn--ghost grow" type="button" (click)="pickerOpen.set(!pickerOpen())"><app-icon name="map" [size]="18" /> {{ 'form.pickOnMap' | t }}</button>
+      }
+      <button class="btn btn--ghost grow" type="button" (click)="hereNow()"><app-icon name="crosshair" [size]="18" /> {{ 'form.hereNow' | t }}</button>
+    </div>
+
+    @if (pickerOpen()) {
+      <p class="muted small hint">{{ 'form.mapHint' | t }}</p>
+      <app-location-picker class="picker" [initial]="pickerStart()" [mapId]="maps.config()?.mapId ?? 'DEMO_MAP_ID'" (moved)="pickerCenter.set($event)" />
+      <button class="btn btn--primary btn--block" type="button" (click)="confirmPin()">{{ 'form.confirmPin' | t }}</button>
+    }
+    @if (!location() && !editing()) { <p class="muted small hint">{{ 'form.askAfterSave' | t }}</p> }
+  </section>
+
+  @if (!editing()) {
+    <label class="check card">
+      <input type="checkbox" [ngModel]="withMe()" (ngModelChange)="withMe.set($event)" /> {{ 'form.withMe' | t }}
+    </label>
+  }
+
+  <div class="actions">
+    <button class="btn btn--primary btn--block btn--xl" type="button" [disabled]="busy()" (click)="save()">{{ 'action.save' | t }}</button>
+    @if (!editing()) {
+      <button class="btn btn--outline btn--block" type="button" [disabled]="busy()" (click)="save(true)">{{ 'action.save' | t }} + {{ 'nav.add' | t }}</button>
+    } @else {
+      <button class="btn btn--danger btn--block" type="button" (click)="remove()"><app-icon name="trash" [size]="18" /> {{ 'action.delete' | t }}</button>
+    }
+  </div>
+</main>

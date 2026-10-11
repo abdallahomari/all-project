@@ -1,0 +1,173 @@
+<header class="top">
+  <div>
+    <h1>{{ 'route.title' | t }}</h1>
+    <p class="muted small">{{ 'route.progress' | t: { done: progress().done, total: progress().total } }}</p>
+  </div>
+  <div class="row">
+    <button class="btn btn--ghost btn--icon" (click)="store.load()" [attr.aria-label]="'route.refresh' | t">
+      <app-icon name="refresh" />
+    </button>
+    @if (maps.state() === 'ready') {
+      <button class="btn btn--ghost btn--icon" (click)="toggleMap()" [attr.aria-label]="(mapOpen() ? 'route.hideMap' : 'route.showMap') | t">
+        <app-icon name="map" />
+      </button>
+    }
+  </div>
+</header>
+<div class="progress" aria-hidden="true">
+  <span [style.width.%]="progress().total ? (progress().done / progress().total) * 100 : 0"></span>
+</div>
+
+@if (maps.state() === 'ready' && mapOpen()) {
+  <div class="map">
+    <app-route-map
+      [courier]="here()"
+      [stops]="mapStops()"
+      [path]="store.road()?.path ?? []"
+      [mapId]="maps.config()?.mapId ?? 'DEMO_MAP_ID'"
+      [youLabel]="'route.you' | t"
+      (stopClick)="sheetId.set($event)"
+    />
+  </div>
+}
+
+<main class="page">
+  @if (geo.state() === 'denied' || geo.state() === 'unavailable') {
+    <div class="notice notice--warn">
+      <app-icon name="crosshair" />
+      <div class="spacer">{{ 'route.gpsOff' | t }}</div>
+      <button class="btn btn--sm btn--outline" (click)="geo.retry()">{{ 'route.gpsRetry' | t }}</button>
+    </div>
+  }
+  @if (maps.state() === 'no-key' || maps.state() === 'error') {
+    <div class="notice notice--info small"><app-icon name="map" [size]="18" /> {{ 'route.mapHidden' | t }}</div>
+  }
+
+  @if (stops().length > 1) {
+    <div class="tools">
+      <button class="btn btn--outline btn--sm" (click)="sortNow()"><app-icon name="sort" [size]="18" /> {{ 'route.optimize' | t }}</button>
+      @if (maps.config()?.serverRouting) {
+        <button class="btn btn--outline btn--sm" [disabled]="roadBusy()" (click)="sortWithRoads()">
+          <app-icon name="route" [size]="18" /> {{ 'route.optimizeRoads' | t }}
+        </button>
+      }
+    </div>
+  }
+
+  <!-- Pick-ups grouped by shop -->
+  @if (pickupGroups().length) {
+    <h2 class="section-title"><app-icon name="shop" [size]="18" /> {{ 'route.pickups' | t: { count: store.pickups().length } }}</h2>
+    <div class="stack">
+      @for (g of pickupGroups(); track g.shopId) {
+        <div class="card pickup">
+          <div class="spacer">
+            <strong>{{ g.shop?.name }}</strong>
+            <div class="muted small">{{ g.orders.length }} · {{ g.orders[0].customerName }}@if (g.orders.length > 1) {…}</div>
+          </div>
+          <button class="btn btn--primary btn--sm" (click)="pickedAll(g.shopId)"><app-icon name="box" [size]="18" /> {{ 'route.pickedAll' | t }}</button>
+        </div>
+      }
+    </div>
+  }
+
+  <!-- Next stop: the hero -->
+  @if (next(); as s) {
+    <h2 class="section-title">{{ 'route.next' | t }}</h2>
+    <article class="card next">
+      <div class="next__head" (click)="sheetId.set(s.order.id)">
+        <span class="num num--next">1</span>
+        <div class="spacer">
+          <h3>{{ s.order.customerName }}</h3>
+          <p class="muted small">{{ s.shop?.name }}@if (s.order.addressNote) { · {{ s.order.addressNote }} }</p>
+        </div>
+        <div class="next__meta">
+          @if (s.legMeters !== null) { <strong>{{ km(s.legMeters) }}</strong> }
+          <span class="amount cash">{{ money(s.order.amountFils) }}</span>
+        </div>
+      </div>
+      <div class="next__actions">
+        <a class="btn btn--primary" [href]="navUrl(s.order)" target="_blank" rel="noopener"><app-icon name="navigate" /> {{ 'action.navigate' | t }}</a>
+        @if (s.order.customerPhone) {
+          <a class="btn btn--ghost btn--icon" [href]="'tel:' + s.order.customerPhone" [attr.aria-label]="'action.call' | t"><app-icon name="phone" /></a>
+          <a class="btn btn--ghost btn--icon" [href]="waUrl(s.order)" target="_blank" rel="noopener" [attr.aria-label]="'action.whatsapp' | t"><app-icon name="whatsapp" /></a>
+        }
+      </div>
+      <button class="btn btn--success btn--block btn--xl" (click)="sheetId.set(s.order.id)"><app-icon name="check" /> {{ 'action.done' | t }}</button>
+    </article>
+  }
+
+  <!-- Remaining stops in order -->
+  @if (later().length) {
+    <h2 class="section-title">{{ 'route.stops' | t }}</h2>
+    <ol class="list card">
+      @for (s of later(); track s.order.id) {
+        <li class="stop">
+          <span class="num">{{ s.n }}</span>
+          <button class="stop__body" (click)="sheetId.set(s.order.id)">
+            <strong>{{ s.order.customerName }}</strong>
+            <span class="muted small">{{ s.shop?.name }}@if (s.order.addressNote) { · {{ s.order.addressNote }} }</span>
+            <span class="small"><span class="muted">{{ km(s.legMeters) }}</span> · <span class="amount">{{ money(s.order.amountFils) }}</span></span>
+          </button>
+          <div class="stop__move">
+            <button class="btn btn--ghost btn--icon btn--sm" (click)="store.moveStop(s.order.id, -1)" aria-label="Up"><app-icon name="up" [size]="18" /></button>
+            <button class="btn btn--ghost btn--icon btn--sm" (click)="store.moveStop(s.order.id, 1)" aria-label="Down"><app-icon name="down" [size]="18" /></button>
+          </div>
+        </li>
+      }
+    </ol>
+  }
+
+  <!-- Orders that cannot be routed yet -->
+  @if (store.missingLocation().length) {
+    <h2 class="section-title warn"><app-icon name="alert" [size]="18" /> {{ 'route.noLocation' | t: { count: store.missingLocation().length } }}</h2>
+    <p class="muted small hint">{{ 'route.noLocationHint' | t }}</p>
+    <ul class="list card">
+      @for (o of store.missingLocation(); track o.id) {
+        <li class="stop">
+          <span class="num num--warn"><app-icon name="pin" [size]="16" /></span>
+          <button class="stop__body" (click)="sheetId.set(o.id)">
+            <strong>{{ o.customerName }}</strong>
+            <span class="muted small">{{ store.shopById().get(o.shopId)?.name }}@if (o.addressNote) { · {{ o.addressNote }} }</span>
+          </button>
+          <a class="btn btn--outline btn--sm" [href]="askUrl(o)" target="_blank" rel="noopener"><app-icon name="whatsapp" [size]="18" /> {{ 'action.ask' | t }}</a>
+        </li>
+      }
+    </ul>
+  }
+
+  @if (store.loaded() && !store.active().length) {
+    <div class="empty">
+      @if (store.closedToday().length) {
+        <p><strong>{{ 'route.allDone' | t }}</strong></p>
+      } @else {
+        <p><strong>{{ 'route.empty' | t }}</strong></p>
+        <p class="muted">{{ 'route.emptyHint' | t }}</p>
+      }
+      <a class="btn btn--primary" routerLink="/orders/new"><app-icon name="plus" /> {{ 'nav.add' | t }}</a>
+    </div>
+  }
+
+  <!-- Closed today -->
+  @if (store.closedToday().length) {
+    <button class="section-title toggle" (click)="showDone.set(!showDone())">
+      {{ 'cash.delivered' | t }} / {{ 'cash.failed' | t }} ({{ store.closedToday().length }}) <app-icon [name]="showDone() ? 'up' : 'down'" [size]="16" />
+    </button>
+    @if (showDone()) {
+      <ul class="list card">
+        @for (o of store.closedToday(); track o.id) {
+          <li class="stop">
+            <button class="stop__body" (click)="sheetId.set(o.id)">
+              <strong>{{ o.customerName }}</strong>
+              <span class="small"><span class="badge" [class]="'badge badge--' + o.status">{{ 'status.' + o.status | t }}</span>
+                @if (o.collectedFils) { · <span class="amount">{{ money(o.collectedFils) }}</span> }</span>
+            </button>
+          </li>
+        }
+      </ul>
+    }
+  }
+</main>
+
+@if (sheetOrder(); as o) {
+  <app-status-sheet [order]="o" [shop]="store.shopById().get(o.shopId)" (closed)="sheetId.set(null)" (edit)="edit($event)" />
+}
