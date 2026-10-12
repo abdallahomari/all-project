@@ -3,3 +3,6 @@ dist/
 .angular/
 server/data/
 *.log
+server/.env.*
+.firebase/
+.firebaserc

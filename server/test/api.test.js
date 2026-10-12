@@ -159,3 +159,55 @@ test('resolveMapsLink follows redirects but refuses non-Google hosts', async () 
   await assert.rejects(resolveMapsLink('https://evil.example.com/x', { fetchImpl: fakeFetch }), /not_a_maps_link/);
   await assert.rejects(resolveMapsLink('http://169.254.169.254/latest', { fetchImpl: fakeFetch }), /not_a_maps_link/);
 });
+
+test('async persistence: writes answer only after the snapshot is saved', async () => {
+  const saved = [];
+  let release;
+  const gate = new Promise((r) => (release = r));
+  const store = createStore(null, {
+    persist: async (data) => {
+      await gate;
+      saved.push(JSON.parse(JSON.stringify(data)));
+    },
+  });
+  const app = createApp({ store });
+  const server = app.listen(0);
+  await new Promise((r) => server.once('listening', r));
+  try {
+    const pending = fetch(`http://127.0.0.1:${server.address().port}/api/auth/register`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ name: 'P', phone: '0790000001', pin: '1234' }),
+    });
+    await new Promise((r) => setTimeout(r, 50));
+    assert.equal(saved.length, 0);
+    release();
+    const res = await pending;
+    assert.equal(res.status, 201);
+    assert.ok(saved.length >= 1);
+    assert.equal(saved.at(-1).couriers.length, 1);
+
+    const reloaded = createStore(null, { initial: saved.at(-1) });
+    assert.equal(reloaded.data.couriers[0].phone, '+962790000001');
+  } finally {
+    server.close();
+  }
+});
+
+test('async persistence failure returns 503', async () => {
+  const store = createStore(null, { persist: async () => { throw new Error('bucket down'); } });
+  const app = createApp({ store });
+  const server = app.listen(0);
+  await new Promise((r) => server.once('listening', r));
+  try {
+    const res = await fetch(`http://127.0.0.1:${server.address().port}/api/auth/register`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ name: 'P', phone: '0790000002', pin: '1234' }),
+    });
+    assert.equal(res.status, 503);
+    assert.deepEqual(await res.json(), { error: 'save_failed' });
+  } finally {
+    server.close();
+  }
+});

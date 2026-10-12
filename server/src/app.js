@@ -59,6 +59,29 @@ export function createApp({ store, config = {}, fetchImpl = fetch }) {
     res.set('Referrer-Policy', 'strict-origin-when-cross-origin');
     next();
   });
+  // When the store saves asynchronously (Firebase), answer writes only once the save has
+  // landed — a serverless instance may be frozen right after the response is sent.
+  if (store.idle) {
+    app.use((req, res, next) => {
+      if (req.method === 'GET' || req.method === 'HEAD') return next();
+      const end = res.end.bind(res);
+      res.end = (...args) => {
+        store.idle().then(
+          () => end(...args),
+          (err) => {
+            console.error('save failed', err);
+            if (!res.headersSent) {
+              res.status(503).set('Content-Type', 'application/json');
+              res.removeHeader('Content-Length');
+            }
+            end(JSON.stringify({ error: 'save_failed' }));
+          },
+        );
+        return res;
+      };
+      next();
+    });
+  }
 
   const api = express.Router();
 

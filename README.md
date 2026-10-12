@@ -57,6 +57,31 @@ cd ../server && npm start        # serves the API and the built app on PORT (def
 Serve over **HTTPS** — browsers only allow GPS on secure origins. Other env vars: `PORT`, `DATA_FILE`
 (default `server/data/db.json`), `STATIC_DIR`.
 
+## Deploy to Firebase
+
+Firebase Hosting serves the app; `/api/**` is rewritten to a 2nd-gen Cloud Function (`server/src/firebase.js`,
+region `europe-west1`) that runs the same Express API. Data is kept as one JSON object (`wasel/db.json`) in the
+project's default Storage bucket; the function runs as a single instance and only answers a write once it is saved.
+Browser access to Storage is denied (`storage.rules`).
+
+One-time setup in the [Firebase console](https://console.firebase.google.com):
+
+1. Create a project and upgrade it to the **Blaze** plan (Cloud Functions require it; a pilot stays inside the free quota).
+2. Open **Storage → Get started** once, so the default bucket exists.
+3. In Google Cloud **IAM → Service accounts**, create a deploy account with the roles *Firebase Admin*,
+   *Cloud Functions Admin* and *Service Account User*, and download a JSON key.
+
+Then:
+
+```bash
+export FIREBASE_PROJECT=<project-id>
+export GOOGLE_APPLICATION_CREDENTIALS=/path/to/key.json   # or FIREBASE_SERVICE_ACCOUNT='<key json>'
+export GOOGLE_MAPS_BROWSER_KEY=...                        # optional, shows the map
+./scripts/deploy-firebase.sh                              # → https://<project-id>.web.app
+```
+
+Test locally first with `npx firebase-tools emulators:start --only hosting,functions,storage --project demo-wasel`.
+
 ## Tests
 
 ```bash

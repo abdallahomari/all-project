@@ -1,0 +1,10 @@
+rules_version = '2';
+// The app never talks to Storage from the browser: only the API (Admin SDK, which bypasses
+// these rules) reads and writes wasel/db.json. Deny all client access.
+service firebase.storage {
+  match /b/{bucket}/o {
+    match /{allPaths=**} {
+      allow read, write: if false;
+    }
+  }
+}
