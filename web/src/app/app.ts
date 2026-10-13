@@ -4,6 +4,7 @@ import { NavigationEnd, Router, RouterLink, RouterLinkActive, RouterOutlet } fro
 import { filter, map } from 'rxjs';
 import { Auth } from './core/auth';
 import { TranslatePipe } from './core/i18n';
+import { Firebase } from './core/firebase';
 import { Toast } from './core/toast';
 import { Icon } from './shared/icon';
 
@@ -64,5 +65,9 @@ export class App {
     ),
     { initialValue: this.router.url },
   );
+  constructor() {
+    inject(Firebase).init();
+  }
+
   protected showNav = computed(() => this.auth.signedIn() && !/^\/(l\/|login)/.test(this.url()));
 }

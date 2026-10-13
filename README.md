@@ -57,30 +57,26 @@ cd ../server && npm start        # serves the API and the built app on PORT (def
 Serve over **HTTPS** — browsers only allow GPS on secure origins. Other env vars: `PORT`, `DATA_FILE`
 (default `server/data/db.json`), `STATIC_DIR`.
 
-## Deploy to Firebase
+## Deploy to Firebase (project `delivery-guy-70b4a`)
 
 Firebase Hosting serves the app; `/api/**` is rewritten to a 2nd-gen Cloud Function (`server/src/firebase.js`,
 region `europe-west1`) that runs the same Express API. Data is kept as one JSON object (`wasel/db.json`) in the
 project's default Storage bucket; the function runs as a single instance and only answers a write once it is saved.
-Browser access to Storage is denied (`storage.rules`).
+Browser access to Storage is denied (`storage.rules`). The web app connects to Firebase through
+`web/src/app/core/firebase.ts` (config in `firebase-config.ts`, or Hosting's `/__/firebase/init.json`).
 
-One-time setup in the [Firebase console](https://console.firebase.google.com):
+One-time, in the [Firebase console](https://console.firebase.google.com/project/delivery-guy-70b4a):
+put the project on the **Blaze** plan (needed for Cloud Functions) and open **Storage → Get started** once.
 
-1. Create a project and upgrade it to the **Blaze** plan (Cloud Functions require it; a pilot stays inside the free quota).
-2. Open **Storage → Get started** once, so the default bucket exists.
-3. In Google Cloud **IAM → Service accounts**, create a deploy account with the roles *Firebase Admin*,
-   *Cloud Functions Admin* and *Service Account User*, and download a JSON key.
-
-Then:
+Then, signed in (`npx -y firebase-tools@latest login`, or a service-account key in
+`GOOGLE_APPLICATION_CREDENTIALS` / `FIREBASE_SERVICE_ACCOUNT`):
 
 ```bash
-export FIREBASE_PROJECT=<project-id>
-export GOOGLE_APPLICATION_CREDENTIALS=/path/to/key.json   # or FIREBASE_SERVICE_ACCOUNT='<key json>'
-export GOOGLE_MAPS_BROWSER_KEY=...                        # optional, shows the map
-./scripts/deploy-firebase.sh                              # → https://<project-id>.web.app
+./scripts/firebase-setup.sh    # registers the "Wasel Web" app and writes its config
+./scripts/deploy-firebase.sh   # → https://delivery-guy-70b4a.web.app
 ```
 
-Test locally first with `npx firebase-tools emulators:start --only hosting,functions,storage --project demo-wasel`.
+Test locally first with `npx -y firebase-tools@latest emulators:start --only hosting,functions,storage --project demo-wasel`.
 
 ## Tests
 

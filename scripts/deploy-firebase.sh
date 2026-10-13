@@ -1,35 +1,28 @@
 #!/usr/bin/env bash
-# Deploy Wasel to Firebase (Hosting + Cloud Functions 2nd gen + Storage).
+# Deploy Wasel to Firebase project delivery-guy-70b4a:
+#   Hosting (Angular app) + Cloud Functions 2nd gen (API) + Storage rules.
 #
-# Needs, as environment variables:
-#   FIREBASE_PROJECT            Firebase project id (create it at https://console.firebase.google.com,
-#                               upgrade to the Blaze plan, and open Storage once to create the bucket)
-#   GOOGLE_APPLICATION_CREDENTIALS  path to a service-account JSON key, or
-#   FIREBASE_SERVICE_ACCOUNT    the JSON key itself (written to a temp file)
-# Optional (map + road routing):
-#   GOOGLE_MAPS_BROWSER_KEY, GOOGLE_MAPS_SERVER_KEY, GOOGLE_MAPS_MAP_ID
+# Login (one of):
+#   GOOGLE_APPLICATION_CREDENTIALS  path to a service-account JSON key
+#   FIREBASE_SERVICE_ACCOUNT        the JSON key itself
+#   or `npx -y firebase-tools@latest login` on your own machine
+# Optional: FIREBASE_PROJECT (default from .firebaserc), GOOGLE_MAPS_BROWSER_KEY,
+#           GOOGLE_MAPS_SERVER_KEY, GOOGLE_MAPS_MAP_ID
+# Functions need the project on the Blaze plan; Storage needs "Get started" once in the console.
 set -euo pipefail
 cd "$(dirname "$0")/.."
+source scripts/firebase-auth.sh
 
-: "${FIREBASE_PROJECT:?Set FIREBASE_PROJECT to your Firebase project id}"
-
-if [[ -z "${GOOGLE_APPLICATION_CREDENTIALS:-}" && -n "${FIREBASE_SERVICE_ACCOUNT:-}" ]]; then
-  key_file="$(mktemp)"
-  trap 'rm -f "$key_file"' EXIT
-  printf '%s' "$FIREBASE_SERVICE_ACCOUNT" > "$key_file"
-  export GOOGLE_APPLICATION_CREDENTIALS="$key_file"
-fi
-: "${GOOGLE_APPLICATION_CREDENTIALS:?Set GOOGLE_APPLICATION_CREDENTIALS or FIREBASE_SERVICE_ACCOUNT}"
+PROJECT="${FIREBASE_PROJECT:-delivery-guy-70b4a}"
 
 # Function environment (read by firebase deploy from server/.env.<project>).
-env_file="server/.env.${FIREBASE_PROJECT}"
 {
   echo "GOOGLE_MAPS_BROWSER_KEY=${GOOGLE_MAPS_BROWSER_KEY:-}"
   echo "GOOGLE_MAPS_SERVER_KEY=${GOOGLE_MAPS_SERVER_KEY:-}"
   echo "GOOGLE_MAPS_MAP_ID=${GOOGLE_MAPS_MAP_ID:-}"
-} > "$env_file"
+} > "server/.env.${PROJECT}"
 
 npm --prefix server ci --omit=dev
-npx --yes firebase-tools@15 deploy --project "$FIREBASE_PROJECT" --only hosting,functions,storage --non-interactive --force
+npx -y firebase-tools@latest deploy --project "$PROJECT" --only hosting,functions,storage --non-interactive --force
 
-echo "Live at: https://${FIREBASE_PROJECT}.web.app"
+echo "Live at: https://${PROJECT}.web.app"
